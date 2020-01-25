@@ -67,10 +67,10 @@ namespace Shield
 	class TESEquipEventHandler : public RE::BSTEventSink<RE::TESEquipEvent>
 	{
 	public:
-		using EventResult = RE::EventResult;
+		using EventResult = RE::BSEventNotifyControl;
 
 		static TESEquipEventHandler* GetSingleton();
-		virtual EventResult ReceiveEvent(RE::TESEquipEvent* a_event, RE::BSTEventSource<RE::TESEquipEvent>* a_eventSource) override;
+		virtual EventResult ProcessEvent(const RE::TESEquipEvent* a_event, RE::BSTEventSource<RE::TESEquipEvent>* a_eventSource) override;
 
 	protected:
 		TESEquipEventHandler() = default;
@@ -86,10 +86,10 @@ namespace Shield
 	class BSAnimationGraphEventHandler : public RE::BSTEventSink<RE::BSAnimationGraphEvent>
 	{
 	public:
-		using EventResult = RE::EventResult;
+		using EventResult = RE::BSEventNotifyControl;
 
 		static BSAnimationGraphEventHandler* GetSingleton();
-		virtual EventResult ReceiveEvent(RE::BSAnimationGraphEvent* a_event, RE::BSTEventSource<RE::BSAnimationGraphEvent>* a_eventSource) override;
+		virtual EventResult ProcessEvent(const RE::BSAnimationGraphEvent* a_event, RE::BSTEventSource<RE::BSAnimationGraphEvent>* a_eventSource) override;
 
 	protected:
 		BSAnimationGraphEventHandler() = default;

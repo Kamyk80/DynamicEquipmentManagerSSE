@@ -18,8 +18,8 @@ void VisitPlayerInventoryChanges(InventoryChangesVisitor* a_visitor)
 	std::map<FormID, std::pair<RE::InventoryEntryData*, Count>> invMap;
 	if (changes) {
 		for (auto& entry : *changes->entryList) {
-			if (entry && entry->type) {
-				invMap.emplace(entry->type->formID, std::make_pair(entry, entry->countDelta));
+			if (entry && entry->object) {
+				invMap.emplace(entry->object->formID, std::make_pair(entry, entry->countDelta));
 			}
 		}
 	}
@@ -27,18 +27,18 @@ void VisitPlayerInventoryChanges(InventoryChangesVisitor* a_visitor)
 	auto container = player->GetContainer();
 	std::vector<RE::InventoryEntryData*> heapList;
 	if (container) {
-		container->ForEach([&](RE::TESContainer::Entry* a_entry) -> bool
+		container->ForEachContainerObject([&](RE::ContainerObject* a_entry) -> bool
 		{
-			if (a_entry->form) {
-				auto& it = invMap.find(a_entry->form->formID);
+			if (a_entry->obj) {
+				auto& it = invMap.find(a_entry->obj->formID);
 				if (it != invMap.end()) {
-					if (!a_entry->form->IsGold()) {
+					if (!a_entry->obj->IsGold()) {
 						it->second.second += a_entry->count;
 					}
 				} else {
-					RE::InventoryEntryData* entryData = new RE::InventoryEntryData(a_entry->form, a_entry->count);
+					RE::InventoryEntryData* entryData = new RE::InventoryEntryData(a_entry->obj, a_entry->count);
 					heapList.push_back(entryData);
-					invMap.emplace(a_entry->form->formID, std::make_pair(entryData, entryData->countDelta));
+					invMap.emplace(a_entry->obj->formID, std::make_pair(entryData, entryData->countDelta));
 				}
 			}
 			return true;
@@ -66,12 +66,12 @@ bool SinkAnimationGraphEventHandler(RE::BSTEventSink<RE::BSAnimationGraphEvent>*
 	player->GetAnimationGraphManager(graphManager);
 	if (graphManager) {
 		bool sinked = false;
-		for (auto& animationGraph : graphManager->animationGraphs) {
+		for (auto& animationGraph : graphManager->graphs) {
 			if (sinked) {
 				break;
 			}
-			RE::BSTEventSource<RE::BSAnimationGraphEvent>* eventSource = animationGraph->GetBSAnimationGraphEventSource();
-			for (auto& sink : eventSource->eventSinks) {
+			RE::BSTEventSource<RE::BSAnimationGraphEvent>* eventSource = animationGraph->GetEventSource<RE::BSAnimationGraphEvent>();
+			for (auto& sink : eventSource->sinks) {
 				if (sink == a_sink) {
 					sinked = true;
 					break;
@@ -79,7 +79,7 @@ bool SinkAnimationGraphEventHandler(RE::BSTEventSink<RE::BSAnimationGraphEvent>*
 			}
 		}
 		if (!sinked) {
-			graphManager->animationGraphs.front()->GetBSAnimationGraphEventSource()->AddEventSink(a_sink);
+			graphManager->graphs.front()->GetEventSource<RE::BSAnimationGraphEvent>()->AddEventSink(a_sink);
 			return true;
 		}
 	}

@@ -113,7 +113,7 @@ namespace
 	class TESObjectLoadedEventHandler : public RE::BSTEventSink<RE::TESObjectLoadedEvent>
 	{
 	public:
-		using EventResult = RE::EventResult;
+		using EventResult = RE::BSEventNotifyControl;
 
 
 		static TESObjectLoadedEventHandler* GetSingleton()
@@ -123,7 +123,7 @@ namespace
 		}
 
 
-		virtual EventResult ReceiveEvent(RE::TESObjectLoadedEvent* a_event, RE::BSTEventSource<RE::TESObjectLoadedEvent>* a_eventSource) override
+		virtual EventResult ProcessEvent(const RE::TESObjectLoadedEvent* a_event, RE::BSTEventSource<RE::TESObjectLoadedEvent>* a_eventSource) override
 		{
 			if (!a_event) {
 				return EventResult::kContinue;
@@ -207,8 +207,7 @@ extern "C" {
 		}
 
 		switch (a_skse->RuntimeVersion()) {
-		case RUNTIME_VERSION_1_5_73:
-		case RUNTIME_VERSION_1_5_80:
+		case RUNTIME_VERSION_1_5_97:
 			break;
 		default:
 			_FATALERROR("Unsupported runtime version %08X!\n", a_skse->RuntimeVersion());

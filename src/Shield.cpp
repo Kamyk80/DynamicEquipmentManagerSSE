@@ -38,7 +38,7 @@ namespace Shield
 	{
 		if (_equip) {
 			auto player = RE::PlayerCharacter::GetSingleton();
-			if (!player->processManager->GetEquippedLeftHand()) {
+			if (!player->currentProcess->GetEquippedLeftHand()) {
 				ShieldEquipVisitor visitor;
 				VisitPlayerInventoryChanges(&visitor);
 			}
@@ -57,13 +57,13 @@ namespace Shield
 
 	bool ShieldTaskDelegate::ShieldEquipVisitor::Accept(RE::InventoryEntryData* a_entry, SInt32 a_count)
 	{
-		if (a_entry->type->formID == Shield::GetSingleton()->GetFormID()) {
+		if (a_entry->object->formID == Shield::GetSingleton()->GetFormID()) {
 			g_skipAnim = true;
-			auto shield = static_cast<RE::TESObjectARMO*>(a_entry->type);
-			auto equipManager = RE::EquipManager::GetSingleton();
+			auto shield = static_cast<RE::TESObjectARMO*>(a_entry->object);
+			auto equipManager = RE::ActorEquipManager::GetSingleton();
 			auto player = RE::PlayerCharacter::GetSingleton();
-			auto xList = (a_entry->extraList && !a_entry->extraList->empty()) ? a_entry->extraList->front() : 0;
-			equipManager->EquipItem(player, shield, xList, 1, shield->equipmentType, true, false, false);
+			auto xList = (a_entry->extraLists && !a_entry->extraLists->empty()) ? a_entry->extraLists->front() : 0;
+			equipManager->EquipItem(player, shield, xList, 1, shield->equipSlot, true, false, false);
 			return false;
 		}
 		return true;
@@ -72,17 +72,17 @@ namespace Shield
 
 	bool ShieldTaskDelegate::ShieldUnEquipVisitor::Accept(RE::InventoryEntryData* a_entry, SInt32 a_count)
 	{
-		using FirstPersonFlag = RE::BGSBipedObjectForm::BipedBodyTemplate::FirstPersonFlag;
+		using FirstPersonFlag = RE::BIPED_MODEL::BipedObjectSlot;
 
-		if (a_entry->type->formID == Shield::GetSingleton()->GetFormID()) {
-			if (a_entry->extraList) {
-				for (auto& xList : *a_entry->extraList) {
+		if (a_entry->object->formID == Shield::GetSingleton()->GetFormID()) {
+			if (a_entry->extraLists) {
+				for (auto& xList : *a_entry->extraLists) {
 					if (xList->HasType(RE::ExtraDataType::kWorn)) {
-						auto armor = static_cast<RE::TESObjectARMO*>(a_entry->type);
+						auto armor = static_cast<RE::TESObjectARMO*>(a_entry->object);
 						if (armor->HasPartOf(FirstPersonFlag::kShield)) {
-							auto equipManager = RE::EquipManager::GetSingleton();
+							auto equipManager = RE::ActorEquipManager::GetSingleton();
 							auto player = RE::PlayerCharacter::GetSingleton();
-							equipManager->UnEquipItem(player, armor, xList, 1, armor->equipmentType, true, false);
+							equipManager->UnequipItem(player, armor, xList, 1, armor->equipSlot, true, false);
 							return false;
 						}
 					}
@@ -112,24 +112,24 @@ namespace Shield
 	}
 
 
-	auto TESEquipEventHandler::ReceiveEvent(RE::TESEquipEvent* a_event, RE::BSTEventSource<RE::TESEquipEvent>* a_eventSource)
+	auto TESEquipEventHandler::ProcessEvent(const RE::TESEquipEvent* a_event, RE::BSTEventSource<RE::TESEquipEvent>* a_eventSource)
 		-> EventResult
 	{
-		using FirstPersonFlag = RE::BGSBipedObjectForm::BipedBodyTemplate::FirstPersonFlag;
+		using FirstPersonFlag = RE::BIPED_MODEL::BipedObjectSlot;
 
-		if (!a_event || !a_event->akSource || !a_event->akSource->IsPlayerRef() || PlayerIsBeastRace()) {
+		if (!a_event || !a_event->hActor || !a_event->hActor->IsPlayerRef() || PlayerIsBeastRace()) {
 			return EventResult::kContinue;
 		}
 
-		auto armor = RE::TESForm::LookupByID<RE::TESObjectARMO>(a_event->formID);
+		auto armor = RE::TESForm::LookupByID<RE::TESObjectARMO>(a_event->baseObject);
 		if (!armor) {
 			return EventResult::kContinue;
 		}
 
 		if (armor->HasPartOf(FirstPersonFlag::kShield)) {
 			auto shield = Shield::GetSingleton();
-			if (a_event->isEquipping) {
-				shield->SetForm(a_event->formID);
+			if (a_event->equipped) {
+				shield->SetForm(a_event->baseObject);
 			} else {
 				auto player = RE::PlayerCharacter::GetSingleton();
 				if (player->IsWeaponDrawn()) {
@@ -149,15 +149,15 @@ namespace Shield
 	}
 
 
-	auto BSAnimationGraphEventHandler::ReceiveEvent(RE::BSAnimationGraphEvent* a_event, RE::BSTEventSource<RE::BSAnimationGraphEvent>* a_eventSource)
+	auto BSAnimationGraphEventHandler::ProcessEvent(const RE::BSAnimationGraphEvent* a_event, RE::BSTEventSource<RE::BSAnimationGraphEvent>* a_eventSource)
 		-> EventResult
 	{
-		if (!a_event || !a_event->akTarget || !a_event->akTarget->IsPlayerRef()) {
+		if (!a_event || !a_event->holder || !a_event->holder->IsPlayerRef()) {
 			return EventResult::kContinue;
 		}
 
 		auto task = SKSE::GetTaskInterface();
-		switch (HashAnimation(a_event->animName)) {
+		switch (HashAnimation(a_event->tag)) {
 		case Anim::kWeaponDraw:
 			if (!PlayerIsBeastRace()) {
 				task->AddTask(new ShieldTaskDelegate(true));
